@@ -1,0 +1,341 @@
+================================================================================
+REQUISITOS E ESPECIFICAÇÕES - PLATAFORMA DE HELPDESK
+================================================================================
+
+================================================================================
+1. ARQUITETURA TÉCNICA (STACK)
+================================================================================
+
+Frontend + Backend:
+- Next.js (framework full-stack React)
+- API Routes integradas (sem necessidade de backend separado)
+- Server-side rendering para performance
+- Deploy simplificado (Vercel gratuito)
+
+Banco de Dados:
+- PostgreSQL (dados relacionais)
+
+Autenticação:
+- NextAuth (open-source, integração nativa com Next.js)
+
+Armazenamento de Arquivos:
+- AWS S3 ou Google Cloud Storage
+- NUNCA salvar arquivos dentro do banco de dados
+
+Emails Transacionais:
+- SendGrid, AWS SES ou Resend
+- Para notificações automáticas
+
+================================================================================
+2. MODELO DE DADOS (5 TABELAS PRINCIPAIS)
+================================================================================
+
+2.1. USERS (Usuários)
+---------------------
+- id (primary key)
+- nome
+- email (unique)
+- senha_hash
+- role (CLIENTE ou AGENTE)
+- created_at
+
+2.2. CATEGORIES (Categorias)
+----------------------------
+- id (primary key)
+- nome (ex: "Financeiro", "Técnico", "Comercial")
+- descricao
+- created_at
+
+2.3. TICKETS (Chamados)
+-----------------------
+- id (primary key - número sequencial ex: #1001)
+- user_id (foreign key → Users - quem abriu)
+- assigned_to (foreign key → Users - agente responsável)
+- category_id (foreign key → Categories)
+- status (enum)
+- assunto
+- descricao
+- created_at
+- updated_at
+
+2.4. MESSAGES (Comentários/Interações)
+--------------------------------------
+- id (primary key)
+- ticket_id (foreign key → Tickets)
+- user_id (foreign key → Users - quem escreveu)
+- mensagem (text)
+- created_at
+
+2.5. ATTACHMENTS (Anexos)
+-------------------------
+- id (primary key)
+- message_id (foreign key → Messages - NOT NULL)
+- url (caminho no S3/GCS)
+- filename (nome original do arquivo)
+- size (tamanho em bytes)
+- created_at
+
+NOTA IMPORTANTE: Anexos sempre pertencem a uma mensagem específica. 
+Ao criar um ticket com anexo, cria-se automaticamente a mensagem inicial.
+
+================================================================================
+3. MÁQUINA DE ESTADOS (FLUXO DE STATUS)
+================================================================================
+
+FLUXO PRINCIPAL:
+NOVO → EM_ANALISE → AGUARDANDO_CLIENTE → RESOLVIDO → FECHADO
+  ↓
+CANCELADO (para tickets duplicados/erro)
+
+DESCRIÇÃO DOS ESTADOS:
+----------------------
+1. NOVO: Estado inicial quando o cliente cria o ticket
+
+2. EM_ANALISE: Agente assume o ticket (atribuição manual ou automática)
+
+3. AGUARDANDO_CLIENTE: Agente respondeu e aguarda retorno (SLA pausa aqui)
+
+4. RESOLVIDO: Agente marcou como solucionado
+
+5. FECHADO: Cliente confirmou OU sistema fechou automaticamente após X dias 
+   sem resposta (tickets fechados não podem ser editados)
+
+6. CANCELADO: Ticket descartado (duplicado, engano) - não conta nas métricas 
+   de resolução
+
+TRANSIÇÕES PERMITIDAS:
+----------------------
+- De RESOLVIDO → EM_ANALISE (se cliente reabrir por insatisfação)
+- Qualquer status → CANCELADO (apenas agentes)
+
+================================================================================
+4. REQUISITOS DE SEGURANÇA E PERFORMANCE
+================================================================================
+
+PROTEÇÕES ESSENCIAIS:
+--------------------
+✓ Sanitização de Input: Prevenir XSS (Cross-Site Scripting) em descrições 
+  e mensagens
+
+✓ Rate Limiting: Limitar criação de tickets (ex: máximo 10 por hora por 
+  usuário)
+
+✓ Validação de Arquivos: Verificar tipo e tamanho de anexos (prevenir 
+  uploads maliciosos)
+
+✓ HTTPS Obrigatório: Todas as comunicações criptografadas
+
+✓ Emails Transacionais Confiáveis: API profissional (SendGrid/SES) com 
+  autenticação SPF/DKIM
+
+✓ Interface Responsiva: Mobile-first design (clientes abrirão tickets pelo 
+  celular)
+
+✓ Backup Automático: Rotina diária de backup do PostgreSQL
+
+================================================================================
+5. FUNCIONALIDADES - VISÃO DO CLIENTE (MVP - FASE 1)
+================================================================================
+
+5.1. DASHBOARD DO CLIENTE
+--------------------------
+✓ Botão destacado: "Abrir Novo Chamado"
+
+✓ Tabela "Meus Chamados" com colunas:
+  - ID do Ticket
+  - Assunto
+  - Categoria
+  - Status (com cores visuais)
+  - Última Atualização
+
+5.2. VISUALIZAÇÃO DO TICKET
+----------------------------
+✓ Interface estilo chat (cronológica, vertical)
+
+✓ Histórico completo de mensagens
+
+✓ Upload de anexos (arrastar/colar imagens)
+
+✓ Botão "Reabrir Ticket" (se status = RESOLVIDO)
+
+5.3. NOTIFICAÇÕES POR EMAIL
+----------------------------
+✓ Email automático ao criar ticket
+
+✓ Email quando agente responder
+
+✓ Email quando ticket for resolvido
+
+================================================================================
+6. FUNCIONALIDADES - VISÃO DO AGENTE (MVP - FASE 1)
+================================================================================
+
+6.1. DASHBOARD DO AGENTE
+-------------------------
+✓ Fila de Entrada: Lista de tickets com status "NOVO"
+
+✓ Filtros Rápidos:
+  - "Meus Chamados"
+  - "Não Atribuídos"
+  - "Atrasados" (baseado em SLA)
+  - "Resolvidos Hoje"
+  - Por Categoria
+
+✓ Campo de Busca: Buscar por ID do ticket ou palavra-chave no 
+  assunto/descrição
+
+6.2. GERENCIAMENTO DE TICKET
+-----------------------------
+✓ Atribuir ticket para si ou outro agente
+
+✓ Alterar status (respeitando máquina de estados)
+
+✓ Alterar categoria
+
+✓ Editor de resposta com:
+  - Suporte a CTRL+V para colar imagens
+  - Upload de múltiplos arquivos
+  - Formatação básica de texto (negrito, itálico, listas)
+
+6.3. FERRAMENTAS DE PRODUTIVIDADE
+----------------------------------
+✓ Respostas Prontas (Macros): Lista de textos salvos para respostas comuns
+  Exemplo: "Olá! Recebemos seu chamado e estamos analisando."
+
+✓ Histórico de Ações: Log de quem mudou status/responsável/categoria
+
+================================================================================
+7. FLUXOS DE USUÁRIO PRINCIPAIS
+================================================================================
+
+7.1. FLUXO: CLIENTE ABRE TICKET
+--------------------------------
+1. Cliente faz login
+2. Acessa dashboard
+3. Clica em "Abrir Novo Chamado"
+4. Preenche formulário:
+   - Assunto
+   - Descrição
+   - Categoria
+   - Anexos (opcional)
+5. Submete ticket
+6. Sistema cria ticket com status NOVO
+7. Sistema cria mensagem inicial automaticamente
+8. Sistema envia email de confirmação ao cliente
+9. Cliente é redirecionado para visualização do ticket
+
+7.2. FLUXO: AGENTE RESPONDE TICKET
+-----------------------------------
+1. Agente faz login
+2. Visualiza fila de tickets NOVO
+3. Seleciona ticket
+4. Sistema muda status para EM_ANALISE
+5. Agente atribui ticket para si
+6. Agente escreve resposta
+7. Agente adiciona anexos (se necessário)
+8. Agente muda status para AGUARDANDO_CLIENTE
+9. Sistema envia email ao cliente notificando resposta
+
+7.3. FLUXO: RESOLUÇÃO DE TICKET
+--------------------------------
+1. Agente marca ticket como RESOLVIDO
+2. Sistema envia email ao cliente
+3. Cliente pode:
+   a) Confirmar resolução → Status muda para FECHADO
+   b) Reabrir ticket → Status volta para EM_ANALISE
+   c) Não responder → Sistema fecha automaticamente após X dias
+
+7.4. FLUXO: BUSCA E FILTROS (AGENTE)
+------------------------------------
+1. Agente acessa dashboard
+2. Utiliza filtros rápidos:
+   - Meus Chamados
+   - Não Atribuídos
+   - Atrasados
+   - Por Categoria
+3. OU utiliza campo de busca por ID/palavra-chave
+4. Sistema exibe resultados filtrados
+5. Agente seleciona ticket para gerenciar
+
+================================================================================
+8. ESPECIFICAÇÕES DE INTERFACE
+================================================================================
+
+8.1. DESIGN GERAL
+-----------------
+- Mobile-first design (responsivo)
+- Interface limpa e intuitiva
+- Cores visuais para status de tickets
+- Layout moderno e profissional
+
+8.2. COMPONENTES PRINCIPAIS
+----------------------------
+- Tabelas com ordenação e paginação
+- Interface de chat para visualização de tickets
+- Editor de texto rico para respostas
+- Upload de arquivos com drag-and-drop
+- Sistema de notificações visuais
+- Filtros e busca em tempo real
+
+8.3. CORES PARA STATUS (SUGESTÃO)
+----------------------------------
+- NOVO: Azul
+- EM_ANALISE: Amarelo/Laranja
+- AGUARDANDO_CLIENTE: Roxo
+- RESOLVIDO: Verde claro
+- FECHADO: Verde escuro
+- CANCELADO: Cinza
+
+================================================================================
+9. REQUISITOS ADICIONAIS
+================================================================================
+
+9.1. SISTEMA DE SLA (Service Level Agreement)
+----------------------------------------------
+- Rastreamento de tempo de resposta
+- Pausa de SLA quando status = AGUARDANDO_CLIENTE
+- Indicador visual de tickets atrasados
+- Métricas de performance
+
+9.2. SISTEMA DE LOGS E AUDITORIA
+---------------------------------
+- Registro de todas as alterações em tickets
+- Histórico de mudanças de status
+- Histórico de atribuições
+- Histórico de mudanças de categoria
+- Timestamp e usuário responsável por cada ação
+
+9.3. SISTEMA DE PERMISSÕES
+---------------------------
+- CLIENTE: Pode criar tickets, visualizar seus próprios tickets, 
+  adicionar mensagens, reabrir tickets resolvidos
+- AGENTE: Todas as permissões de cliente + atribuir tickets, 
+  alterar status, alterar categoria, cancelar tickets, 
+  visualizar todos os tickets
+
+9.4. VALIDAÇÕES E REGRAS DE NEGÓCIO
+------------------------------------
+- Tickets fechados não podem ser editados
+- Apenas agentes podem cancelar tickets
+- Apenas o cliente pode confirmar resolução
+- Sistema fecha automaticamente tickets resolvidos após X dias sem resposta
+- Rate limiting: máximo 10 tickets por hora por usuário
+- Validação de tipos de arquivo permitidos para anexos
+- Validação de tamanho máximo de anexos
+
+================================================================================
+10. MÉTRICAS E RELATÓRIOS (FUTURO)
+================================================================================
+
+Métricas Importantes:
+- Tempo médio de primeira resposta
+- Tempo médio de resolução
+- Taxa de resolução no primeiro contato
+- Tickets por categoria
+- Tickets por agente
+- Taxa de reabertura de tickets
+- Satisfação do cliente (após implementar sistema de avaliação)
+
+================================================================================
+FIM DO DOCUMENTO
+================================================================================

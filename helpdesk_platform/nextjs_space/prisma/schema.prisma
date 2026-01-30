@@ -1,0 +1,98 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/helpdesk_platform/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum TipoCliente {
+  PF
+  PJ
+}
+
+enum StatusCliente {
+  ATIVO
+  INATIVO
+  SUSPENSO
+  BLOQUEADO
+}
+
+enum TicketStatus {
+  NOVO
+  EM_ANALISE
+  AGUARDANDO_CLIENTE
+  RESOLVIDO
+  FECHADO
+  CANCELADO
+}
+
+// Tabela de Clientes - apenas clientes do negócio podem acessar
+model Cliente {
+  idCliente             String        @id @default(cuid())
+  nomeCliente           String
+  tipoCliente           TipoCliente   @default(PF)
+  emailCliente          String        @unique
+  senhaCliente          String
+  numeroCelularCliente  String?
+  statusCliente         StatusCliente @default(ATIVO)
+  planoCliente          String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  tickets               Ticket[]      @relation("CustomerTickets")
+  messages              Message[]
+}
+
+// Tabela de Agentes - funcionários da empresa
+model Agente {
+  id              String    @id @default(cuid())
+  nome            String
+  email           String    @unique
+  senha           String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  assignedTickets Ticket[]  @relation("AgentTickets")
+  messages        Message[]
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  ticketNumber  Int          @unique @default(autoincrement())
+  title         String
+  description   String       @db.Text
+  status        TicketStatus @default(NOVO)
+  clienteId     String
+  cliente       Cliente      @relation("CustomerTickets", fields: [clienteId], references: [idCliente])
+  agenteId      String?
+  agente        Agente?      @relation("AgentTickets", fields: [agenteId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  messages      Message[]
+  attachment    Attachment?
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  clienteId  String?
+  cliente    Cliente? @relation(fields: [clienteId], references: [idCliente])
+  agenteId   String?
+  agente     Agente?  @relation(fields: [agenteId], references: [id])
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+}
+
+model Attachment {
+  id              String   @id @default(cuid())
+  ticketId        String   @unique
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  filename        String
+  cloudStoragePath String
+  isPublic        Boolean  @default(false)
+  size            Int
+  createdAt       DateTime @default(now())
+}
