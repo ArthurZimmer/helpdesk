@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/signup":{},"/api/tickets/[id]/messages":{},"/api/files/[...path]":{},"/api/upload/presigned":{},"/api/tickets":{},"/api/tickets/[id]":{}}}

@@ -1,4 +1,18 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/login/page": "app/login/page.js",
+  "/signup/page": "app/signup/page.js",
+  "/page": "app/page.js",
+  "/api/signup/route": "app/api/signup/route.js",
+  "/api/files/[...path]/route": "app/api/files/[...path]/route.js",
+  "/api/tickets/[id]/messages/route": "app/api/tickets/[id]/messages/route.js",
+  "/api/tickets/[id]/route": "app/api/tickets/[id]/route.js",
+  "/api/upload/presigned/route": "app/api/upload/presigned/route.js",
+  "/api/tickets/route": "app/api/tickets/route.js",
+  "/agente/ticket/[id]/page": "app/agente/ticket/[id]/page.js",
+  "/agente/page": "app/agente/page.js",
+  "/cliente/page": "app/cliente/page.js",
+  "/cliente/novo/page": "app/cliente/novo/page.js",
+  "/cliente/ticket/[id]/page": "app/cliente/ticket/[id]/page.js"
 }
