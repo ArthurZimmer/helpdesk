@@ -110,7 +110,7 @@ function LoginForm() {
           </form>
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-400">
-              Acesso exclusivo para clientes cadastrados
+              Contate um consultor caso não tenha acesso ao sistema
             </p>
           </div>
         </CardContent>
