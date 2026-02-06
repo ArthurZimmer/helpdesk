@@ -4,31 +4,36 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const hashedPasswordAgente = await bcrypt.hash("johndoe123", 10);
-  const hashedPasswordCliente = await bcrypt.hash("cliente123", 10);
+  const hashedPasswordAgente = await bcrypt.hash("ize123adm", 10);
+  const hashedPasswordCliente = await bcrypt.hash("123cliente", 10);
 
-  // Agente principal (hidden test account)
+  // adm (hidden test account)
   await prisma.agente.upsert({
-    where: { email: "john@doe.com" },
+    where: { email: "admin@ize.com" },
     update: {},
     create: {
-      email: "john@doe.com",
-      nome: "Administrador",
-      senha: hashedPasswordAgente
+      email: 'admin@ize.com',
+      nome: 'Administrador',
+      senha: hashedPasswordAgente, // Nunca salve senha em texto puro!
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
   });
 
   // Cliente teste
   await prisma.cliente.upsert({
-    where: { emailCliente: "test@cliente.com" },
+    where: { emailCliente: "cliente@teste.com" },
     update: {},
     create: {
-      emailCliente: "test@cliente.com",
-      nomeCliente: "Cliente Teste",
-      senhaCliente: hashedPasswordCliente,
-      tipoCliente: "PF",
-      statusCliente: "ATIVO",
-      planoCliente: "Básico"
+      nomeCliente: 'Teste',
+    tipoCliente: 'PF',
+    emailCliente: 'cliente@teste.com',
+    senhaCliente: hashedPasswordCliente,
+    numeroCelularCliente: '999999999',
+    statusCliente: 'ATIVO',
+    planoCliente: 'Básico',
+    createdAt: new Date(),
+    updatedAt: new Date()
     }
   });
 
