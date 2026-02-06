@@ -14,7 +14,7 @@ async function main() {
     create: {
       email: 'admin@ize.com',
       nome: 'Administrador',
-      senha: 'ize123adm', // Nunca salve senha em texto puro!
+      senha: hashedPasswordAgente, // Nunca salve senha em texto puro!
       createdAt: new Date(),
       updatedAt: new Date()
     }
@@ -28,7 +28,7 @@ async function main() {
       nomeCliente: 'Teste',
     tipoCliente: 'PF',
     emailCliente: 'cliente@teste.com',
-    senhaCliente: '123cliente',
+    senhaCliente: hashedPasswordCliente,
     numeroCelularCliente: '999999999',
     statusCliente: 'ATIVO',
     planoCliente: 'Básico',
